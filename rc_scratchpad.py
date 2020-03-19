@@ -2,7 +2,8 @@
 
 import random
 from reconchess import *
-
+import chess
+import numpy as np
 
 class MichaelBot(Player):
     # major methods taken from ReconChess docs (especially TroutBot)
@@ -10,6 +11,11 @@ class MichaelBot(Player):
         self.board = None
         self.color = None
         self.my_piece_captured_square = None
+
+        self.turn_num = 0  # to be iterated for turn-based decisions
+        self.piece_values = {1: 1, 2: 3, 3: 3.5, 4: 5, 5: 9}
+        self.enemy_values = {1: 1, 2: 3, 3: 3.5, 4: 5, 5: 9, 6: 100}  # priorities for attacking
+        self.in_out_timer = 0  # to say if we need to attack quickly then retreat
 
     def handle_game_start(self, color: Color, board: chess.Board, opponent_name: str):
         self.board = board
@@ -20,9 +26,33 @@ class MichaelBot(Player):
         if captured_my_piece:
             self.board.remove_piece_at(capture_square)
 
+    def _get_my_pieces(self):
+        self.current_pieces = {i: [] for i in range(1, 7)}
+
+        for piece_type in range(1, 7):
+            for pos in self.board.pieces(piece_type, self.color):
+                current_pieces = current_pieces[piece_type].append(pos)
+
+    def _calc_moves(self):
+        # where I do Gillespie-esque decision making
+        piece_dict = self.current_pieces
+        priority_dict = self.piece_dict.copy()
+        for k in priority_dict.keys():
+            if self.color == chess.BLACK:
+                # numbers are inverted
+                priority_dict[k] = [64 - x for x in priority_dict[k]]
+            priority_dict[k] += 3 * [int(x) for x in priority_dict[k]] # prioritizing distance
+            priority_dict[k] += self.piece_values[k]
+
+        piece_to_move = **place with max value**
+        return piece_to_move
+            # priority_dict[k] += ***distance from baseline so pieces farther away get chosen
+
+
+
     def choose_sense(self, sense_actions: List[Square], move_actions: List[chess.Move], seconds_left: float) -> \
             Optional[Square]:
-        #return random.choice(sense_actions)
+        # return random.choice(sense_actions)
 
         # if we might capture a piece when we move, sense where the capture will occur
         future_move = self.choose_move(move_actions, seconds_left)
