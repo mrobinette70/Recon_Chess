@@ -2,8 +2,9 @@
 
 import random
 from reconchess import *
-import chess
+import chess.engine
 import numpy as np
+
 
 class MichaelBot(Player):
     # major methods taken from ReconChess docs (especially TroutBot)
@@ -11,6 +12,7 @@ class MichaelBot(Player):
         self.board = None
         self.color = None
         self.my_piece_captured_square = None
+        self.engine = chess.engine.SimpleEngine.popen_uci("stockfish_20011801_x64")
 
         self.turn_num = 0  # to be iterated for turn-based decisions
         self.piece_values = {1: 1, 2: 3, 3: 3.5, 4: 5, 5: 9}
@@ -20,11 +22,15 @@ class MichaelBot(Player):
     def handle_game_start(self, color: Color, board: chess.Board, opponent_name: str):
         self.board = board
         self.color = color
+        print(self.color)
 
     def handle_opponent_move_result(self, captured_my_piece: bool, capture_square: Optional[Square]):
         self.my_piece_captured_square = capture_square
         if captured_my_piece:
             self.board.remove_piece_at(capture_square)
+
+
+
 
     def _get_my_pieces(self):
         self.current_pieces = {i: [] for i in range(1, 7)}
@@ -34,7 +40,7 @@ class MichaelBot(Player):
                 current_pieces = current_pieces[piece_type].append(pos)
 
     def _calc_moves(self):
-        # where I do Gillespie-esque decision making
+        # where I do Gillespie-esque decision making:
         piece_dict = self.current_pieces
         priority_dict = self.piece_dict.copy()
         for k in priority_dict.keys():
@@ -44,16 +50,28 @@ class MichaelBot(Player):
             priority_dict[k] += 3 * [int(x) for x in priority_dict[k]] # prioritizing distance
             priority_dict[k] += self.piece_values[k]
 
-        piece_to_move = **place with max value**
-        return piece_to_move
+        #piece_to_move = **place with max value**
+        #return piece_to_move
             # priority_dict[k] += ***distance from baseline so pieces farther away get chosen
+
+    '''
+    def _get_my_pieces(self):
+        self.current_pieces = []
+        for piece_type in range(1,7):
+            for pos in self.board.pieces(piece_type, self.color):
+                self.current_pieces = self.current_pieces.append(piece_type.pos)
+
+    def _calc_moves(self):
+        priorities = self.current_pieces.copy()
+        for piece in
+    '''
 
 
 
     def choose_sense(self, sense_actions: List[Square], move_actions: List[chess.Move], seconds_left: float) -> \
             Optional[Square]:
         # return random.choice(sense_actions)
-
+        print('LENGTH: ', len(move_actions))
         # if we might capture a piece when we move, sense where the capture will occur
         future_move = self.choose_move(move_actions, seconds_left)
         if future_move is not None and self.board.piece_at(future_move.to_square) is not None:
