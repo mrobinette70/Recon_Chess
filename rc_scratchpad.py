@@ -22,7 +22,6 @@ class MichaelBot(Player):
     def handle_game_start(self, color: Color, board: chess.Board, opponent_name: str):
         self.board = board
         self.color = color
-        print(self.color)
 
     def handle_opponent_move_result(self, captured_my_piece: bool, capture_square: Optional[Square]):
         self.my_piece_captured_square = capture_square
@@ -57,7 +56,7 @@ class MichaelBot(Player):
             positions = [64 - x for x in positions]
         distance_scores = [3 * int(x/8) for x in positions]  # weighting distance from the start
         centrality = [-1 * abs(4.5 - x % 8) for x in positions]  # weighting pieces near the center of the board
-        piece_scores = [1.5*self.piece_values[p] for p in piece_dict['pieces']]
+        piece_scores = [3.5*self.piece_values[p] for p in piece_dict['pieces']]
         total_score = [x + y + z for x, y, z in zip(distance_scores, piece_scores, centrality)]  # these may need to be fractions for random.choices
         idx_to_move = random.choices(range(len(piece_dict['position'])), weights=total_score)[0]
         piece_to_move = piece_dict['position'][idx_to_move]
