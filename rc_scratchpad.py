@@ -15,7 +15,7 @@ class MichaelBot(Player):
         self.engine = chess.engine.SimpleEngine.popen_uci("stockfish_20011801_x64")
 
         self.turn_num = 0  # to be iterated for turn-based decisions
-        self.piece_values = {1: 1, 2: 3, 3: 3.5, 4: 5, 5: 9}
+        self.piece_values = {1: 1, 2: 3, 3: 3.5, 4: 5, 5: 9, 6: 2}
         self.enemy_values = {1: 1, 2: 3, 3: 3.5, 4: 5, 5: 9, 6: 100}  # priorities for attacking
         self.in_out_timer = 0  # to say if we need to attack quickly then retreat
 
@@ -29,49 +29,48 @@ class MichaelBot(Player):
         if captured_my_piece:
             self.board.remove_piece_at(capture_square)
 
+    def _get_my_pieces(self, move_actions):
+        pt_dict = {'P': 1, 'N': 2, 'B': 3, 'R': 4, 'Q': 5, 'K': 6}
 
+        #find all moves
+        positions = []
+        piece_types = []
+        targets = []
+        for i in move_actions:
 
-
-    def _get_my_pieces(self):
-        self.current_pieces = {i: [] for i in range(1, 7)}
-
-        for piece_type in range(1, 7):
-            for pos in self.board.pieces(piece_type, self.color):
-                current_pieces = current_pieces[piece_type].append(pos)
-
-    def _calc_moves(self):
+            # find piece positions
+            positions.append(i.from_square)
+            # find piece targets (for deciding where to sense)
+            targets.append(i.to_square)
+            # find piece types
+            piece_types.append(pt_dict[self.board.piece_at(i.from_square).symbol().upper()])
+        piece_dict = {'position': positions, 'pieces': piece_types, 'targets': targets}
+        return piece_dict
+    def _calc_moves(self, piece_dict):
         # where I do Gillespie-esque decision making:
-        piece_dict = self.current_pieces
-        priority_dict = self.piece_dict.copy()
-        for k in priority_dict.keys():
-            if self.color == chess.BLACK:
-                # numbers are inverted
-                priority_dict[k] = [64 - x for x in priority_dict[k]]
-            priority_dict[k] += 3 * [int(x) for x in priority_dict[k]] # prioritizing distance
-            priority_dict[k] += self.piece_values[k]
 
-        #piece_to_move = **place with max value**
-        #return piece_to_move
-            # priority_dict[k] += ***distance from baseline so pieces farther away get chosen
+        priorities = []
+        positions = piece_dict['position'].copy()
+        if self.color == chess.BLACK:
+            # position numbers are inverted
+            positions = [64 - x for x in positions]
+        distance_scores = [3 * int(x/8) for x in positions]  # weighting distance from the start
+        centrality = [-1 * abs(4.5 - x % 8) for x in positions]  # weighting pieces near the center of the board
+        piece_scores = [self.piece_values[p] for p in piece_dict['pieces']]
+        total_score = [x + y + z for x, y, z in zip(distance_scores, piece_scores, centrality)]  # these may need to be fractions for random.choices
+        piece_to_move = random.choices(piece_dict['position'], weights=total_score)[0]
 
-    '''
-    def _get_my_pieces(self):
-        self.current_pieces = []
-        for piece_type in range(1,7):
-            for pos in self.board.pieces(piece_type, self.color):
-                self.current_pieces = self.current_pieces.append(piece_type.pos)
-
-    def _calc_moves(self):
-        priorities = self.current_pieces.copy()
-        for piece in
-    '''
-
+        return piece_to_move
 
 
     def choose_sense(self, sense_actions: List[Square], move_actions: List[chess.Move], seconds_left: float) -> \
             Optional[Square]:
         # return random.choice(sense_actions)
-        print('LENGTH: ', len(move_actions))
+        #print('senses: ', sense_actions)
+        #print('actions: ', (move_actions))
+        print(self._get_my_pieces(move_actions))
+        print(' ')
+        print(self._calc_moves(self._get_my_pieces(move_actions)))
         # if we might capture a piece when we move, sense where the capture will occur
         future_move = self.choose_move(move_actions, seconds_left)
         if future_move is not None and self.board.piece_at(future_move.to_square) is not None:
@@ -90,6 +89,7 @@ class MichaelBot(Player):
 
     def choose_move(self, move_actions: List[chess.Move], seconds_left: float) -> Optional[chess.Move]:
         # return random.choice(move_actions + [None])
+        ### keep this
         # if we might be able to take the king, try to
         enemy_king_square = self.board.king(not self.color)
         if enemy_king_square:
@@ -98,6 +98,9 @@ class MichaelBot(Player):
             if enemy_king_attackers:
                 attacker_square = enemy_king_attackers.pop()
                 return chess.Move(attacker_square, enemy_king_square)
+
+        ### my code here
+
 
         # otherwise, try to move with the stockfish chess engine
         try:
